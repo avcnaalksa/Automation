@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Otomasi Dimulai
-echo "Memulai Otomasi Ubuntu DHCP Server dan SSH"
+# Memulai konfigurasi Ubuntu DHCP Server dan VLAN
+echo "Konfigurasi Ubuntu DHCP Server dan NAT dimulai..."
 
-# Repo Kartolo
+# 1. Update Repository
 cat <<EOF | sudo tee /etc/apt/sources.list
 deb http://kartolo.sby.datautama.net.id/ubuntu/ focal main restricted universe multiverse
 deb http://kartolo.sby.datautama.net.id/ubuntu/ focal-updates main restricted universe multiverse
@@ -11,11 +11,10 @@ deb http://kartolo.sby.datautama.net.id/ubuntu/ focal-security main restricted u
 deb http://kartolo.sby.datautama.net.id/ubuntu/ focal-backports main restricted universe multiverse
 deb http://kartolo.sby.datautama.net.id/ubuntu/ focal-proposed main restricted universe multiverse
 EOF
+sudo apt update -y
 
-sudo apt update
-
-# Konfigurasi Network (Netplan)
-cat <<EOT > /etc/netplan/01-netcfg.yaml
+# 2. Konfigurasi Network (Netplan)
+cat <<EOT | sudo tee /etc/netplan/01-netcfg.yaml
 network:
   version: 2
   renderer: networkd
@@ -31,12 +30,12 @@ network:
       addresses:
         - 192.168.6.1/24
 EOT
-netplan apply
+sudo netplan apply
 
-# Instalasi ISC DHCP Server
+# 3. Instalasi ISC DHCP Server
 sudo apt install isc-dhcp-server -y
 
-# Konfigurasi DHCP Server
+# 4. Konfigurasi DHCP Server
 cat <<EOF | sudo tee /etc/dhcp/dhcpd.conf
 subnet 192.168.6.0 netmask 255.255.255.0 {
   range 192.168.6.2 192.168.6.254;
@@ -49,29 +48,14 @@ subnet 192.168.6.0 netmask 255.255.255.0 {
 }
 EOF
 
-# Konfigurasi ISC DHCP Server untuk VLAN
+# 5. Aktifkan DHCP untuk VLAN
 echo 'INTERFACESv4="eth1.10"' | sudo tee /etc/default/isc-dhcp-server
 sudo systemctl restart isc-dhcp-server
 
-# Aktifkan IP Forwarding
+# 6. Aktifkan IP Forwarding dan NAT Masquerading
 sudo sed -i '/^#net.ipv4.ip_forward=1/s/^#//' /etc/sysctl.conf
 sudo sysctl -p
-
-# NAT Masquerading
-iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
 sudo apt install iptables-persistent -y
 
-# Instal SSH Server
-sudo apt install openssh-server -y
-sudo systemctl enable ssh
-sudo systemctl restart ssh
-
-# Buka Port SSH di Firewall
-sudo ufw allow ssh
-sudo ufw enable
-
-# Instalasi Tambahan untuk Netmiko
-sudo apt install python3 python3-pip -y
-pip3 install netmiko
-
-echo "Konfigurasi Ubuntu selesai. DHCP Server, SSH, dan NAT siap digunakan."
+echo "Konfigurasi Ubuntu selesai!"
