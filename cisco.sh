@@ -5,7 +5,7 @@ echo "Memastikan expect terpasang..."
 apt update && apt install -y expect
 
 # Variabel konfigurasi
-CISCO_IP="192.168.31.2"    # IP untuk Cisco Switch
+CISCO_IP="192.168.6.2"    # IP untuk Cisco Switch
 USERNAME="admin"           # Username Cisco
 PASSWORD="password"        # Password Cisco
 
