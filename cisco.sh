@@ -11,7 +11,7 @@ error_message() { echo -e "${RED}$1 gagal!${NC}"; exit 1; }
 
 # IP dan Port Cisco Device
 CISCO_IP="192.168.157.128"
-CISCO_PORT="30023"
+CISCO_PORT="30021"
 
 # Pastikan `expect` terinstal
 command -v expect > /dev/null || error_message "Expect tidak terpasang. Instal dengan: sudo apt install expect"
