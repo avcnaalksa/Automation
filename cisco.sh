@@ -10,7 +10,7 @@ success_message() { echo -e "${GREEN}$1 berhasil!${NC}"; }
 error_message() { echo -e "${RED}$1 gagal!${NC}"; exit 1; }
 
 # IP dan Port Cisco Device
-CISCO_IP="192.168.234.132"
+CISCO_IP="192.168.157.128"
 CISCO_PORT="30013"
 
 # Pastikan `expect` terinstal
