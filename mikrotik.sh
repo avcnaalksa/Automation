@@ -1,51 +1,43 @@
 #!/bin/bash
 
-# IP dan Port Mikrotik
-MKT_HOST="192.168.157.129"  # IP Mikrotik di topologi
-MKT_PORT="30023"            # Port SSH Mikrotik
-MKT_USER="admin"            # Default username Mikrotik
-MKT_PASS=""                 # Password kosong
+# IP dan port MikroTik
+MT_IP="192.168.157.200"
+MT_PORT="30023"  # Port Telnet sesuai topologi
 
-# Pastikan `sshpass` terinstal
-command -v sshpass > /dev/null || {
-  echo "sshpass tidak ditemukan. Instal dengan: sudo apt install sshpass"
-  exit 1
+# User dan password MikroTik
+MT_USER="admin"
+MT_PASS=""  # Kosongkan jika default, ganti sesuai kebutuhan
+
+# Pastikan 'expect' terinstal
+command -v expect > /dev/null || {
+    echo "Expect tidak ditemukan! Silakan instal dengan: sudo apt install expect"
+    exit 1
 }
 
-# SSH ke Mikrotik dan konfigurasi
-echo "Menghubungkan ke Mikrotik dan melakukan konfigurasi..."
-sshpass -p "$MKT_PASS" ssh -p "$MKT_PORT" -o StrictHostKeyChecking=no $MKT_USER@$MKT_HOST << EOF
-# Tambahkan VLAN 10 di interface trunk
-/interface vlan
-add name=vlan10 vlan-id=10 interface=ether1
+# Konfigurasi MikroTik melalui Telnet
+expect <<EOF
+spawn telnet $MT_IP $MT_PORT
+set timeout 20
 
-# Tambahkan IP di interface VLAN 10
-/ip address
-add address=192.168.6.1/24 interface=vlan10
+# Login ke MikroTik
+expect "Login:" { send "$MT_USER\r" }
+expect {
+    "Password:" { send "$MT_PASS\r" }
+    ">" {}
+}
 
-# Konfigurasi NAT untuk akses internet
-/ip firewall nat
-add chain=srcnat out-interface=ether1 action=masquerade
+# Konfigurasi MikroTik
+send "/interface vlan add name=vlan10 vlan-id=10 interface=ether1\r"
+send "/ip address add address=192.168.6.1/24 interface=vlan10\r"
+send "/ip pool add name=dhcp_pool10 ranges=192.168.6.2-192.168.6.254\r"
+send "/ip dhcp-server add name=dhcp_vlan10 interface=vlan10 address-pool=dhcp_pool10\r"
+send "/ip dhcp-server network add address=192.168.6.0/24 gateway=192.168.6.1\r"
+send "/ip dhcp-server enable dhcp_vlan10\r"
 
-# Aktifkan DHCP Server di VLAN 10
-/ip dhcp-server
-add name=dhcp_vlan10 interface=vlan10 lease-time=10m
-/ip pool
-add name=pool_vlan10 ranges=192.168.6.2-192.168.6.254
-/ip dhcp-server network
-add address=192.168.6.0/24 gateway=192.168.6.1 dns-server=8.8.8.8
-
-# Aktifkan interface trunk dan VLAN
-/interface enable ether1
-/interface enable vlan10
-
-# Selesai konfigurasi
+# Keluar dari MikroTik
+send "/quit\r"
+expect eof
 EOF
 
-# Periksa hasil
-if [ $? -eq 0 ]; then
-  echo -e "\033[0;32mKonfigurasi Mikrotik berhasil!\033[0m"
-else
-  echo -e "\033[0;31mKonfigurasi Mikrotik gagal!\033[0m"
-  exit 1
-fi
+# Cek status
+[ $? -eq 0 ] && echo "Konfigurasi MikroTik berhasil!" || echo "Konfigurasi MikroTik gagal! Periksa koneksi Telnet dan ulangi."
