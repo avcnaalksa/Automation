@@ -48,7 +48,7 @@ network:
       id: 10
       link: eth1
       addresses:
-        - 192.168.20.1/24
+        - 192.168.6.1/24
 EOT
 sudo netplan apply
 
